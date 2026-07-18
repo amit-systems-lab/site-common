@@ -1,0 +1,68 @@
+<%
+// Underline the authors listed in the page metadata key `highlight-authors`
+// (set site-wide via publications/_metadata.yml in the consuming site).
+// Names are also matched in "Lastname, F." form (used by some bib styles).
+function highlightNames(authorString, names) {
+  let result = authorString;
+  for (const name of names) {
+    if (result.includes(name)) {
+      result = result.split(name).join(`<u>${name}</u>`);
+      continue;
+    }
+    const parts = name.split(' ');
+    if (parts.length >= 2) {
+      const last = parts[parts.length - 1];
+      const firstInitial = parts[0][0] + '.';
+      const lastFirstInitial = `${last}, ${firstInitial}`;
+      if (result.includes(lastFirstInitial)) {
+        result = result.split(lastFirstInitial).join(`<u>${lastFirstInitial}</u>`);
+      }
+    }
+  }
+  return result;
+}
+%>
+<%
+function generateLinks(links, bibkey) {
+  const items = Array.isArray(links) ? links.slice() : [];
+  if (bibkey) {
+    items.push({
+      href: `/bib/${bibkey}.bib`,
+      text: 'BibTeX',
+      icon: 'braces',
+      download: `${bibkey}.bib`,
+    });
+  }
+  if (items.length === 0) {
+    return "";
+  }
+  let html = '<div class="bib-links">';
+  for (const link of items) {
+    if (link.href && link.text) {
+      const downloadAttr = link.download ? ` download="${link.download}"` : ' target="_blank"';
+      html += `<a href="${link.href}"${downloadAttr}>`;
+      if (link.icon) {
+        html += `<i class="bi bi-${link.icon}"></i> `;
+      }
+      html += `${link.text}</a> `;
+    }
+  }
+  html += '</div>';
+  return html;
+}
+%>
+
+<!-- Use an ordered list with reversed attribute instead of unordered list -->
+<ol class="listing" reversed>
+    <% for (const item of items) { %>
+      <li class="bib-entry" data-categories="<%= item.categories ? item.categories.join(',') : '' %>">
+        <span class="bib-authors"><%= highlightNames(item.author, item["highlight-authors"] || []) %></span>.
+        <a href="<%= item.path %>"><span class="bib-title"><%= item.title.replace(' 🏆', '') %></span></a>.
+        <span class="bib-venue"><%= item["container-title"] %></span>,
+        <%= item.year %>.
+          <% if (item.award) { %><span class="bib-award"> 🏆</span>
+            <span class="bib-award-text"><%= item.award %></span>
+        <% } %><span class="bib-links"><%= generateLinks(item.links, item.bibkey) %></span>
+      </li>
+    <% } %>
+</ol>

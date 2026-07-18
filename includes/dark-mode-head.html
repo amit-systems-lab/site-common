@@ -1,0 +1,12 @@
+<script>
+  /* Set dark marker before first paint (same logic as Quarto's
+     scheme sentinel) to avoid a white flash on navigation. */
+  (function () {
+    try {
+      var s = localStorage.getItem("quarto-color-scheme");
+      var dark = s ? s === "alternate"
+                   : window.matchMedia("(prefers-color-scheme: dark)").matches;
+      if (dark) document.documentElement.classList.add("site-pre-dark");
+    } catch (e) {}
+  })();
+</script>

@@ -1,0 +1,69 @@
+# Reusable Quarto build + GitHub Pages deploy for amit.zone sites.
+#
+# Caller (in the site repo):
+#
+#   jobs:
+#     publish:
+#       uses: amit-systems-lab/site-common/.github/workflows/quarto-publish.yml@master
+#       permissions:
+#         contents: read
+#         pages: write
+#         id-token: write
+#
+# The Quarto version is pinned HERE, once for all sites. Must be >= 1.7:
+# dark mode relies on respect-user-color-scheme and the
+# body.quarto-light/quarto-dark classes, which 1.4 lacks (1.4 builds
+# render dark backgrounds with light-theme text). Keep in sync with the
+# locally installed Quarto version.
+
+name: Publish Quarto Site
+
+on:
+  workflow_call:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write  # actions/configure-pages reads the Pages site config
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive  # site-common is consumed as a submodule
+
+      - name: Setup Pages
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        uses: actions/configure-pages@v6
+
+      - name: Install Quarto
+        uses: quarto-dev/quarto-actions/setup@v2
+        with:
+          version: 1.9.38
+
+      - name: Render Quarto Project
+        run: quarto render
+
+      - name: Upload artifact
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
