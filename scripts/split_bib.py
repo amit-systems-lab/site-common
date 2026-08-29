@@ -5,6 +5,7 @@ Wired up as a Quarto pre-render step so the per-entry files are
 available at /bib/<key>.bib on the rendered site (and downloadable
 from the BibTeX icon on each publication listing/page).
 """
+import os
 import re
 import sys
 from pathlib import Path
@@ -40,14 +41,28 @@ def parse_entries(content):
         i = j
 
 
+def project_dir():
+    """The consuming site's project root.
+
+    This script lives in the site-common submodule, so it must not derive
+    the root from its own location. Quarto runs pre-render scripts with the
+    project directory as the working directory and exports it as
+    QUARTO_PROJECT_DIR; fall back to the cwd when run by hand.
+    """
+    env_dir = os.environ.get('QUARTO_PROJECT_DIR')
+    return Path(env_dir).resolve() if env_dir else Path.cwd().resolve()
+
+
 def main():
-    repo_root = Path(__file__).resolve().parent.parent
+    repo_root = project_dir()
     src = repo_root / 'publications.bib'
     out_dir = repo_root / 'bib'
 
     if not src.exists():
-        print(f"split_bib: no {src} found, skipping", file=sys.stderr)
-        return 0
+        # Hard failure: a silent skip here ships a site whose BibTeX links
+        # 404 and whose DOI permalinks silently disappear.
+        print(f"split_bib: no {src} found", file=sys.stderr)
+        return 1
 
     out_dir.mkdir(exist_ok=True)
     for old in out_dir.glob('*.bib'):
