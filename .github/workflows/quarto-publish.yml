@@ -46,6 +46,15 @@ jobs:
       - name: Render Quarto Project
         run: quarto render
 
+      # Blocks the deploy on purpose. Both site-breaking bugs shipped here
+      # built green -- a pre-render step that stopped writing bib/, and a
+      # publication whose PDF was never committed -- because a link and its
+      # target live in different places and the target is absent, not
+      # changed. Publishing a page with a dead link is the failure; stopping
+      # to fix it is cheap.
+      - name: Check rendered links
+        run: python3 _common/scripts/check_links.py
+
       - name: Upload artifact
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         uses: actions/upload-pages-artifact@v5
