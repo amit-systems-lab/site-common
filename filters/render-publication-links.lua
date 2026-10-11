@@ -78,11 +78,20 @@ function Pandoc(doc)
 
   if has_venue then
     local venue = pandoc.utils.stringify(meta['container-title'])
+    -- An accepted paper's venue reads "To appear in <venue>", since the
+    -- listing prints container-title verbatim. Use that phrase in place of
+    -- "In" rather than rendering "In To appear in ...".
+    local lead = 'In'
+    local rest = venue:match('^To appear in (.+)$')
+    if rest then
+      lead = 'To appear in'
+      venue = rest
+    end
     local suffix = ''
     if meta.year then
       suffix = ', ' .. pandoc.utils.stringify(meta.year)
     end
-    local venue_html = '<div class="publication-venue">In <em>' .. venue .. '</em>' .. suffix .. '.</div>'
+    local venue_html = '<div class="publication-venue">' .. lead .. ' <em>' .. venue .. '</em>' .. suffix .. '.</div>'
     table.insert(blocks, pandoc.RawBlock('html', venue_html))
   end
 
