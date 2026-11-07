@@ -53,9 +53,16 @@ def main():
     if not site_root.is_dir():
         print(f"check_links: no rendered site at {site_root}", file=sys.stderr)
         return 1
+    # An empty or half-written output directory has no links to break, so
+    # it would otherwise pass.
+    pages = sorted(site_root.rglob('*.html'))
+    if not (site_root / 'index.html').is_file() or len(pages) < 2:
+        print(f"check_links: {site_root} has no index.html or no other pages "
+              f"({len(pages)} HTML file(s)); did the render fail?", file=sys.stderr)
+        return 1
 
     broken, checked = [], 0
-    for html in sorted(site_root.rglob('*.html')):
+    for html in pages:
         for raw, target in targets(html, site_root):
             checked += 1
             # A link to a directory is served by its index.html.
@@ -71,7 +78,7 @@ def main():
         return 1
 
     print(f"check_links: {checked} local links across "
-          f"{sum(1 for _ in site_root.rglob('*.html'))} pages, all resolve")
+          f"{len(pages)} pages, all resolve")
     return 0
 
 
