@@ -11,8 +11,18 @@ import sys
 from pathlib import Path
 
 
+class BibError(Exception):
+    pass
+
+
 def parse_entries(content):
-    """Yield (key, raw_entry_text) for each top-level @entry{} in the bib content."""
+    """Yield (key, raw_entry_text) for each top-level @entry{} in the bib content.
+
+    Raises BibError on an unterminated entry. Braces are unbalanced from that
+    point on, so an unclosed brace mid-file swallows every entry after it;
+    stopping with a partial set would silently drop those papers' BibTeX
+    files and DOI permalinks.
+    """
     n = len(content)
     i = 0
     while i < n:
@@ -35,8 +45,8 @@ def parse_entries(content):
                 depth -= 1
             j += 1
         if depth != 0:
-            print(f"split_bib: unterminated entry {key!r}", file=sys.stderr)
-            return
+            line = content.count('\n', 0, at) + 1
+            raise BibError(f"unterminated entry {key!r} at line {line}")
         yield key, content[at:j]
         i = j
 
@@ -64,16 +74,26 @@ def main():
         print(f"split_bib: no {src} found", file=sys.stderr)
         return 1
 
+    # Parse the whole file before touching bib/, so a bad input fails the
+    # build without first deleting the previous output.
+    content = src.read_text(encoding='utf-8')
+    seen = {}
+    try:
+        for key, entry in parse_entries(content):
+            if key in seen:
+                raise BibError(f"duplicate key {key!r}")
+            seen[key] = entry
+    except BibError as e:
+        print(f"split_bib: {src.name}: {e}", file=sys.stderr)
+        return 1
+    if not seen:
+        print(f"split_bib: no entries found in {src}", file=sys.stderr)
+        return 1
+
     out_dir.mkdir(exist_ok=True)
     for old in out_dir.glob('*.bib'):
         old.unlink()
-
-    content = src.read_text(encoding='utf-8')
-    seen = {}
-    for key, entry in parse_entries(content):
-        if key in seen:
-            print(f"split_bib: duplicate key {key!r}, overwriting", file=sys.stderr)
-        seen[key] = entry
+    for key, entry in seen.items():
         (out_dir / f"{key}.bib").write_text(entry + "\n", encoding='utf-8')
     print(f"split_bib: wrote {len(seen)} entries to {out_dir.relative_to(repo_root)}/")
     return 0
