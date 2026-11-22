@@ -11,6 +11,7 @@ underscore keeps Quarto from rendering these files into the site).
 | Path | What | Wired up via |
 |---|---|---|
 | `scripts/split_bib.py` | Splits `publications.bib` into per-paper `bib/<key>.bib` | `project: pre-render: _common/scripts/split_bib.py` |
+| `scripts/fix_pdfs.py` (+ `fix-pdfs.sh`) | On the rendered copies of every PDF linked from a paper page: sets Title/Author from the front matter, and stamps an author's-version notice when the page has `pdf-notice: {venue, doi}`. Repo originals are untouched. Needs `uv` locally (CI uses `pipx`). | `project: post-render: _common/scripts/fix-pdfs.sh` |
 | `filters/render-publication-links.lua` | Venue + PDF/Code/Permalink/BibTeX links on publication pages | `format: html: filters:` |
 | `templates/bib-template.ejs` | Publications listing template | `listing: template:` in publications.qmd |
 | `css/base.css` | Shared styles consuming `--site-*` variables | `format: html: css: [_common/css/base.css, styles.css]` |
