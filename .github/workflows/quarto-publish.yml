@@ -62,7 +62,14 @@ jobs:
       # site's manifest. The `indexnow` job sends it after the deploy.
       - name: Plan IndexNow submission
         id: indexnow
-        run: python3 _common/scripts/indexnow.py
+        # The workflow runs at @master but the script comes from the site's
+        # _common submodule, which may predate it until the bump lands.
+        run: |
+          if [ -f _common/scripts/indexnow.py ]; then
+            python3 _common/scripts/indexnow.py
+          else
+            echo "indexnow: _common has no indexnow.py yet; skipping"
+          fi
 
       - name: Upload artifact
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
