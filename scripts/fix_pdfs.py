@@ -114,7 +114,7 @@ def main():
             changed = True
         if changed:
             tmp = f"{path}.tmp"
-            doc.save(tmp, garbage=3, deflate=True, use_objstms=True)
+            doc.save(tmp, garbage=3, deflate=True, use_objstms=True, no_new_id=True)
             doc.close()
             os.replace(tmp, path)
         else:

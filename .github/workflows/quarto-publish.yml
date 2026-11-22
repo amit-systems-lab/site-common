@@ -27,6 +27,8 @@ jobs:
     permissions:
       contents: read
       pages: write  # actions/configure-pages reads the Pages site config
+    outputs:
+      indexnow-body: ${{ steps.indexnow.outputs.body }}
 
     steps:
       - name: Checkout repository
@@ -55,6 +57,20 @@ jobs:
       - name: Check rendered links
         run: python3 _common/scripts/check_links.py
 
+      # Writes _site/indexnow-manifest.json and, for a site with an IndexNow
+      # key file, plans a submission of the URLs that differ from the live
+      # site's manifest. The `indexnow` job sends it after the deploy.
+      - name: Plan IndexNow submission
+        id: indexnow
+        # The workflow runs at @master but the script comes from the site's
+        # _common submodule, which may predate it until the bump lands.
+        run: |
+          if [ -f _common/scripts/indexnow.py ]; then
+            python3 _common/scripts/indexnow.py
+          else
+            echo "indexnow: _common has no indexnow.py yet; skipping"
+          fi
+
       - name: Upload artifact
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         uses: actions/upload-pages-artifact@v5
@@ -76,3 +92,25 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
+
+  # Tell IndexNow (Bing, Yandex, Seznam, ...) which URLs this deploy changed.
+  # Advisory: a rejected or failed submission warns but never fails the run.
+  indexnow:
+    needs: [build, deploy]
+    if: needs.build.outputs.indexnow-body != ''
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Submit changed URLs to IndexNow
+        env:
+          BODY: ${{ needs.build.outputs.indexnow-body }}
+        run: |
+          sleep 30  # let the new key file and pages reach the Pages CDN
+          code=$(curl -sS -o resp.txt -w '%{http_code}' -X POST \
+            -H 'Content-Type: application/json; charset=utf-8' \
+            --data "$BODY" https://api.indexnow.org/indexnow) || code=000
+          echo "IndexNow: HTTP $code"; cat resp.txt 2>/dev/null; echo
+          case "$code" in
+            200|202) ;;
+            *) echo "::warning title=IndexNow::submission returned HTTP $code" ;;
+          esac
