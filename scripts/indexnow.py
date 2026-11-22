@@ -40,6 +40,9 @@ MANIFEST = "indexnow-manifest.json"
 KEY_RE = re.compile(r"^[0-9a-f]{32}$")
 SKIP_DIRS = {"site_libs", "_common", "bib"}
 SKIP_FILES = {"404.html"}
+# Quarto's built-in listing templates embed each source file's mtime, which
+# a CI checkout resets on every run; it only feeds client-side sorting.
+VOLATILE = re.compile(rb' data-listing-file-modified-sort="\d+"')
 
 
 def site_url():
@@ -68,7 +71,10 @@ def manifest():
         path = "/" + rel.as_posix()
         if path.endswith("/index.html"):
             path = path[: -len("index.html")]
-        entries[path] = hashlib.sha256(p.read_bytes()).hexdigest()
+        data = p.read_bytes()
+        if p.suffix == ".html":
+            data = VOLATILE.sub(b"", data)
+        entries[path] = hashlib.sha256(data).hexdigest()
     return entries
 
 
