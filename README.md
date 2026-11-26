@@ -12,6 +12,7 @@ underscore keeps Quarto from rendering these files into the site).
 |---|---|---|
 | `scripts/split_bib.py` | Splits `publications.bib` into per-paper `bib/<key>.bib` | `project: pre-render: _common/scripts/split_bib.py` |
 | `scripts/fix_pdfs.py` (+ `fix-pdfs.sh`) | On the rendered copies of every PDF linked from a paper page: sets Title/Author from the front matter, and stamps an author's-version notice when the page has `pdf-notice: {venue, doi}`. Repo originals are untouched. Needs `uv` locally (CI uses `pipx`). | `project: post-render: _common/scripts/fix-pdfs.sh` |
+| `scripts/fix_sitemap.py` | Rewrites `.../index.html` to `.../` in `_site/sitemap.xml`, matching the canonical URLs, so Google ties the home page to the sitemap. | run first by `fix-pdfs.sh` |
 | `scripts/indexnow.py` | Writes `_site/indexnow-manifest.json` (hash per page/PDF), diffs it against the live site's, and plans an [IndexNow](https://www.indexnow.org/documentation) submission of the changed URLs; the workflow's `indexnow` job sends it after deploy. Opt in by committing `<key>.txt` (32 hex chars, containing the key) at the repo root and listing it under `resources`. | runs in `quarto-publish.yml` |
 | `filters/render-publication-links.lua` | Venue + PDF/Code/Permalink/BibTeX links on publication pages | `format: html: filters:` |
 | `templates/bib-template.ejs` | Publications listing template | `listing: template:` in publications.qmd |
